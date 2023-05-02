@@ -1,142 +1,215 @@
 import numpy as np
+from typing import Tuple
 
-training_spam = np.loadtxt(open("data/training_spam.csv"),delimiter=",").astype(np.int32)
 
-testing_spam = np.loadtxt(open("data/testing_spam.csv"),delimiter=",").astype(np.int32)
+def load_data() -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Load training and testing data from CSV files.
+    Returns:
+        Tuple containing training and testing data as numpy arrays.
+    """
+    training_data = np.loadtxt(
+        open("data/training_spam.csv"), delimiter=",", dtype=np.int32)
+    testing_data = np.loadtxt(
+        open("data/testing_spam.csv"), delimiter=",", dtype=np.int32)
 
-batch1 =training_spam[:100,1:]
-batch1_value =training_spam[:100,:1]
+    return training_data, testing_data
 
-batch2 =training_spam[100:200,1:]
-batch2_value =training_spam[100:200,:1]
 
-batch3 =training_spam[200:300,1:]
-batch3_value =training_spam[200:300,:1]
+def create_batches(training_data: np.ndarray, num_batches: int = 10) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Create feature sets and label sets from the training data.
 
-batch4 =training_spam[300:400,1:]
-batch4_value =training_spam[300:400,:1]
+    Args:
+        training_data: numpy array containing the training data.
+        num_batches: number of batches to create.
 
-batch5 =training_spam[400:500,1:]
-batch5_value =training_spam[400:500,:1]
+    Returns:
+        Tuple containing feature sets and label sets as numpy arrays.
+    """
 
-batch6 =training_spam[500:600,1:]
-batch6_value =training_spam[500:600,:1]
+    feature_sets = np.array([training_data[i*100:(i+1)*100, 1:]
+                            for i in range(num_batches)])
+    label_sets = np.array([training_data[i*100:(i+1)*100, :1]
+                          for i in range(num_batches)])
 
-batch7 =training_spam[600:700,1:]
-batch7_value =training_spam[600:700,:1]
-
-batch8 =training_spam[700:800,1:]
-batch8_value =training_spam[700:800,:1]
-
-batch9 =training_spam[800:900,1:]
-batch9_value =training_spam[800:900,:1]
-
-batch10 =training_spam[900:1000,1:]
-batch10_value =training_spam[900:1000,:1]
-
-sample_set = np.array([batch1,batch2,batch3,batch4,batch5,batch6,batch7,batch8,batch9,batch10])
-true_value_set = np.array([batch1_value,batch2_value,batch3_value,batch4_value,batch5_value,batch6_value,batch7_value,batch8_value,batch9_value,batch10_value])
+    return feature_sets, label_sets
 
 
 class SpamClassifier:
     def __init__(self):
         self.learning_rate = 0.1
-        self.input_layer =54
-        self.hidden_layer = 20
+        self.input_nodes = 54
+        self.hidden_nodes = 20
 
-        self.w1 = np.random.uniform(-1,1, (self.input_layer ,self.hidden_layer))
+        self.weights_input_hidden = np.random.uniform(
+            -1, 1, (self.input_nodes, self.hidden_nodes))
+        self.weights_hidden_output = np.random.uniform(
+            -1, 1, (self.hidden_nodes, 1))
+        self.bias_hidden = np.random.uniform(-1, 1, (self.hidden_nodes, 1))
+        self.bias_output = np.random.uniform(-1, 1, (1, 1))
 
-        self.w2 = np.random.uniform(-1,1,(self.hidden_layer ,1))
-       
-        self.b1 = np.random.uniform(-1,1,(self.hidden_layer ,1))
-        
-        self.b2 = np.random.uniform(-1,1,(1 ,1))
+    @staticmethod
+    def sigmoid(layer_input: np.ndarray) -> np.ndarray:
+        """
+       Calculate the sigmoid activation function for the given input.
 
-    def sigmoid(self,layer_input):
+       Args:
+           layer_input: numpy array of input values.
+
+       Returns:
+           numpy array containing the sigmoid activation values.
+       """
         return 1.0 / (1.0 + np.exp(-layer_input))
-    
-    def derivative_sig(self,sigmoid_function):
-        return sigmoid_function * (1.0-sigmoid_function)
+
+    @staticmethod
+    def derivative_sigmoid(sigmoid_output: np.ndarray) -> np.ndarray:
+        """
+        Calculate the derivative of the sigmoid activation function.
+
+        Args:
+            sigmoid_output: numpy array of sigmoid activation values.
+
+        Returns:
+            numpy array containing the derivative of the sigmoid activation values.
+        """
+        return sigmoid_output * (1.0 - sigmoid_output)
+
+    def forward_propagation(self, input_data: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Perform forward propagation through the neural network.
+
+        Args:
+            input_data: numpy array containing the input data.
+
+        Returns:
+            Tuple containing the hidden layer input, hidden layer output, output layer input, and output layer output.
+        """
+        hidden_layer_input = input_data.dot(
+            self.weights_input_hidden) + np.transpose(self.bias_hidden)
+        hidden_layer_output = self.sigmoid(hidden_layer_input)
+        output_layer_input = hidden_layer_output.dot(
+            self.weights_hidden_output) + self.bias_output
+        output_layer_output = self.sigmoid(output_layer_input)
+
+        return hidden_layer_input, hidden_layer_output, output_layer_input, output_layer_output
+
+    def backward_propagation(self, hidden_layer_input: np.ndarray, hidden_layer_output: np.ndarray, output_layer_output: np.ndarray, input_data: np.ndarray, true_values: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Perform the backpropagation step for the neural network.
+
+        Args:
+            hidden_layer_input (np.ndarray): The input to the hidden layer (Z1).
+            hidden_layer_output (np.ndarray): The output of the hidden layer (A1).
+            output_layer_output (np.ndarray): The output of the output layer (A2).
+            input_data (np.ndarray): The input data used for forward propagation.
+            true_values (np.ndarray): The true values for the input data.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Gradients of the weights and biases (weights_input_hidden_update, bias_hidden_update, weights_hidden_output_update, bias_output_update).
+        """
+        m = output_layer_output.size
+        output_layer_error = output_layer_output - true_values
+        weights_hidden_output_update = (
+            1 / m) * hidden_layer_output.T.dot(output_layer_error)
+        bias_output_update = (1 / m) * np.sum(output_layer_error)
+        hidden_layer_error = self.weights_hidden_output * \
+            self.derivative_sigmoid(self.sigmoid(
+                hidden_layer_input)).T.dot(output_layer_error)
+        weights_input_hidden_update = input_data.T.dot(
+            (1 / m) * self.weights_hidden_output.T * self.derivative_sigmoid(self.sigmoid(hidden_layer_input)) * output_layer_error)
+        bias_hidden_update = (1 / m) * np.sum(hidden_layer_error)
+
+        return weights_input_hidden_update, bias_hidden_update, weights_hidden_output_update, bias_output_update
+
+    def update_weights_and_biases(self, weights_input_hidden_update: np.ndarray, bias_hidden_update: np.ndarray, weights_hidden_output_update: np.ndarray, bias_output_update: np.ndarray) -> None:
+        """
+        Update the weights and biases of the neural network using the computed gradients.
+
+        Args:
+            weights_input_hidden_update (np.ndarray): Gradient of the weights between input and hidden layers.
+            bias_hidden_update (np.ndarray): Gradient of the biases for the hidden layer.
+            weights_hidden_output_update (np.ndarray): Gradient of the weights between hidden and output layers.
+            bias_output_update (np.ndarray): Gradient of the bias for the output layer.
+        """
+
+        self.bias_output -= bias_output_update * self.learning_rate
+        self.weights_hidden_output -= weights_hidden_output_update * self.learning_rate
+        self.bias_hidden -= bias_hidden_update * self.learning_rate
+        self.weights_input_hidden -= weights_input_hidden_update * self.learning_rate
+
+    @staticmethod
+    def get_prediction(output_layer_output: np.ndarray) -> np.ndarray:
+        """
+        Convert the output layer values to binary predictions (0 or 1) based on a threshold.
+
+        Args:
+            output_layer_output (np.ndarray): The output values from the output layer of the neural network.
+
+        Returns:
+            np.ndarray: The binary predictions (0 or 1) corresponding to the input output layer values.
+        """
+        return (output_layer_output > 0.5).astype(np.int32)
+
+    @staticmethod
+    def get_accuracy(true_values: np.ndarray, predictions: np.ndarray) -> float:
+        """
+        Calculate the accuracy of the predictions compared to the true values.
+
+        Args:
+            true_values (np.ndarray): The true values (ground truth) of the samples.
+            predictions (np.ndarray): The predicted values for the samples.
+
+        Returns:
+            float: The accuracy of the predictions as a fraction of correct predictions over total predictions.
+        """
+
+        return np.sum(predictions == true_values) / true_values.size
+
+    def gradient_descent(self, feature_sets: np.ndarray, label_sets: np.ndarray) -> float:
+        """
+        Perform gradient descent to optimize the weights and biases of the SpamClassifier.
+
+        :param feature_sets: A list of numpy arrays containing the input features for each batch.
+        :param label_sets: A list of numpy arrays containing the true labels for each batch.
+        """
+        for _ in range(100):
+            for input_data, true_values in zip(feature_sets, label_sets):
+                hidden_layer_input, hidden_layer_output, output_layer_input, output_layer_output = self.forward_propagation(
+                    input_data)
+                weights_input_hidden_update, bias_hidden_update, weights_hidden_output_update, bias_output_update = self.backward_propagation(
+                    hidden_layer_input, hidden_layer_output, output_layer_output, input_data, true_values)
+                self.update_weights_and_biases(
+                    weights_input_hidden_update, bias_hidden_update, weights_hidden_output_update, bias_output_update)
+                predictions = self.get_prediction(output_layer_output)
+                accuracy = self.get_accuracy(true_values, predictions)
+                print('Improving accuracy:', accuracy)
+
+    def make_prediction(self, test_data: np.ndarray) -> np.ndarray:
+        """
+        Make predictions for the given test data using the trained SpamClassifier.
+
+        :param test_data: A numpy array containing the input features for the test data.
+        :return: A numpy array containing the predicted labels for the test data.
+        """
+        _, _, _, output_layer_output = self.forward_propagation(test_data)
+        test_predictions = self.get_prediction(output_layer_output)
+        return test_predictions
 
 
-    def forward_prop(self,input_data):
-        Z1 = input_data.dot(self.w1) + np.transpose(self.b1)
-        A1 = self.sigmoid(Z1)
-        Z2 = A1.dot(self.w2)+ self.b2
-        A2 = self.sigmoid(Z2)
+# Load and process data
+training_data, testing_data = load_data()
+feature_sets, label_sets = create_batches(training_data)
 
-        return Z1, A1, Z2, A2
-    
-    def backward_prop(self,Z1, A1,A2, input_data, true_value):
-        m = A2.size
-        dZ2 = A2 - true_value
-        dW2 = (1 / m )* A1.T.dot(dZ2)
-        db2 = (1 / m) * np.sum(dZ2)
-        dZ1 = (self.w2)*((self.derivative_sig(self.sigmoid((Z1)))).T.dot(dZ2))
-        dW1 = (input_data.T).dot(((1 / m)*(self.w2).T)*((self.derivative_sig(self.sigmoid((Z1))))*(dZ2)))
-        db1 = (1 / m)* np.sum(dZ1)
-        return dW1, db1, dW2, db2
+# Initialize the classifier and train
+classifier = SpamClassifier()
+classifier.gradient_descent(feature_sets, label_sets)
 
-    def updates(self,dW1, db1, dW2, db2):
-        step_size_bs = db2*(self.learning_rate)
-        self.b2 -=step_size_bs
+# Test the classifier
+test_features = testing_data[:, 1:]
+test_labels = testing_data[:, 0].reshape(testing_data.shape[0], 1)
+predictions = classifier.make_prediction(test_features)
 
-        step_size_ws = dW2*(self.learning_rate)
-        self.w2 -=step_size_ws
-
-        step_size_bf = db1*(self.learning_rate)
-        self.b1 -=step_size_bf
-
-        step_size_wf = dW1*(self.learning_rate)
-        self.w1 -=step_size_wf
-
-    def get_prediction(self,A2):
-        for i in range(A2.size):
-            if A2[i,0]>0.5:
-                A2[i,0] = 1
-            else:
-                A2[i,0] = 0
-        return A2
-
-    def get_accuracy(self,j,predictions):
-        return np.sum(predictions==j)/j.size
-
-    def gradient_descent(self,sample_set,true_value_set):
-        for number in range(100):
-            for i,j in zip(sample_set,true_value_set):
-                Z1, A1, Z2, A2 = self.forward_prop(i)
-                dW1, db1, dW2, db2 = self.backward_prop(Z1, A1,A2,i,j)
-                self.updates(dW1, db1, dW2, db2)  
-                predictions = self.get_prediction(A2)
-                accuracy= self.get_accuracy(j,predictions)
-                print('Improving accuracy:',accuracy)
-
-        return dW1, db1, dW2, db2
-
-    def make_prediction(self,test_data):
-        Z1, A1, Z2, A2 = self.forward_prop(test_data) 
-        test_p = self.get_prediction(A2)
-        return test_p
-
-  
-
-testing_spam = np.loadtxt(open("data/testing_spam.csv"), delimiter=",").astype(np.int32)
-test_data = testing_spam[:, 1:]
-test_size =testing_spam[:, 0].size
-test_result = testing_spam[:, 0].reshape(test_size,1)
-test_labels =test_result
-
-
-Classifier = SpamClassifier()
-Classifier.gradient_descent(sample_set,true_value_set)
-predictions = Classifier.make_prediction(test_data)
-
-accuracy = np.count_nonzero(predictions == test_labels)/test_labels.shape[0]
+# Calculate and display accuracy
+accuracy = np.count_nonzero(predictions == test_labels) / test_labels.shape[0]
 print(f"Accuracy on test data is: {accuracy}")
-        
-
-
-
-
-
-
