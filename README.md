@@ -1,5 +1,5 @@
 # Spam Classifier
-This repository contains a simple neural network-based spam classifier implemented in Python. The model is trained on a dataset containing labeled emails as spam or non-spam.
+There are many powerful libraries available, such as PyTorch and TensorFlow, for building neural networks. However, it's essential to understand the underlying principles that guide their operation. In this repository, we aim to elucidate these principles by providing a simple neural network-based spam classifier, implemented from scratch in Python. This model has been trained on a dataset containing emails that have been meticulously labeled as 'spam' or 'ham' (non-spam).
 
 ## Installation
 Before running the script, make sure you have `numpy` installed in your Python environment. To install it, you can use the following command:

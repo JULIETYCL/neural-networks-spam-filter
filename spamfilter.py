@@ -99,9 +99,9 @@ class SpamClassifier:
         Perform the backpropagation step for the neural network.
 
         Args:
-            hidden_layer_input (np.ndarray): The input to the hidden layer (Z1).
-            hidden_layer_output (np.ndarray): The output of the hidden layer (A1).
-            output_layer_output (np.ndarray): The output of the output layer (A2).
+            hidden_layer_input (np.ndarray): The input to the hidden layer.
+            hidden_layer_output (np.ndarray): The output of the hidden layer.
+            output_layer_output (np.ndarray): The output of the output layer.
             input_data (np.ndarray): The input data used for forward propagation.
             true_values (np.ndarray): The true values for the input data.
 
